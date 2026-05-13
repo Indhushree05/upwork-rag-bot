@@ -1,10 +1,3 @@
-"""
-app.py
-------
-Streamlit interface for the Upwork API Support Bot.
-Run with:  streamlit run app.py
-"""
-
 import os
 from pathlib import Path
 import streamlit as st
@@ -20,21 +13,15 @@ from rag_pipeline import (
     DOCS_PATH,
 )
 
-st.set_page_config(
-    page_title="Upwork API Support Bot",
-    page_icon="🤖",
-    layout="wide",
-)
+st.set_page_config(page_title="Upwork API Support Bot", page_icon="🤖", layout="wide")
 
+# Initialize states
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
-
 if "history" not in st.session_state:
     st.session_state.history = []
 
-if "current_query" not in st.session_state:
-    st.session_state["current_query"] = ""
-
+# Auto-load logic
 if st.session_state.vector_store is None and Path(CHROMA_PERSIST_DIR).exists():
     try:
         st.session_state.vector_store = load_vector_store()
@@ -43,96 +30,45 @@ if st.session_state.vector_store is None and Path(CHROMA_PERSIST_DIR).exists():
 
 with st.sidebar:
     st.title("Setup")
-    st.markdown("---")
+    uploaded_file = st.file_uploader("Upload Upwork API PDF", type=["pdf"])
 
-    uploaded_file = st.file_uploader(
-        "Upload Upwork API PDF documentation",
-        type=["pdf"],
-        help="The PDF will be ingested locally — never sent to any external LLM.",
-    )
-
-    if st.button("Ingest / Re-ingest Documentation", use_container_width=True):
-        if uploaded_file is None:
-            pdf_path = DOCS_PATH
-            if not Path(pdf_path).exists():
-                st.error(f"No file uploaded and '{pdf_path}' not found.")
-                st.stop()
-        else:
-            pdf_path = "upwork_api_docs_temp.pdf"
-            with open(pdf_path, "wb") as f:
+    if st.button("Ingest Documentation", use_container_width=True):
+        if uploaded_file:
+            with open("temp_docs.pdf", "wb") as f:
                 f.write(uploaded_file.read())
+            path = "temp_docs.pdf"
+        else:
+            path = DOCS_PATH
 
-        with st.spinner("Ingesting documentation… this may take a minute."):
-            try:
-                ingest(pdf_path)
-                st.session_state.vector_store = load_vector_store()
-                st.success("Documentation ingested successfully!")
-            except Exception as e:
-                st.error(f"Ingestion failed: {e}")
+        with st.spinner("Processing..."):
+            ingest(path)
+            st.session_state.vector_store = load_vector_store()
+            st.success("Database Ready!")
 
-    st.markdown("---")
-
-    if st.session_state.vector_store is not None:
+    if st.session_state.vector_store:
         st.success("✅ Vector Store Loaded")
-    else:
-        st.warning("⚠️ Vector Store Not Found")
-
-    st.markdown(
-        "**Model:** Meta-Llama-3.1-8B-Instruct-Turbo  \n"
-        "**Embeddings:** all-MiniLM-L6-v2 (local)  \n"
-        "**Vector DB:** ChromaDB"
-    )
 
 st.title("Upwork API Technical Support Bot")
-st.caption(
-    "Ask any question about the Upwork API. "
-    "Answers are grounded exclusively in the official documentation."
-)
 
-st.markdown("#### Evaluation Questions")
-eval_questions = [
-    "What is the specific request-per-second rate limit for the Upwork API, and is it enforced per Key or per IP?",
-    "How long is an OAuth access token valid for?",
-    "Can I use a Client Credentials Grant to access a user's private contract details?",
-]
-cols = st.columns(3)
-for i, (col, q) in enumerate(zip(cols, eval_questions)):
-    if col.button(f"Q{i + 1}", help=q, use_container_width=True, key=f"eval_{i}"):
-        st.session_state["current_query"] = q
-        st.rerun()
+# Use a clean form for questions
+with st.form("chat_form", clear_on_submit=True):
+    user_query = st.text_input("Ask a technical question (e.g., 'How long is a refresh token valid?'):")
+    submitted = st.form_submit_button("Ask")
 
-query = st.text_input(
-    "Your question:",
-    value=st.session_state["current_query"],
-    placeholder="e.g. How do I authenticate with OAuth 2.0?",
-)
-
-ask_button = st.button("Ask", type="primary", use_container_width=False)
-
-if ask_button and query.strip():
-    st.session_state["current_query"] = query.strip()
-    if st.session_state.vector_store is None:
-        st.error("Vector store is not loaded. Please upload the documentation and click 'Ingest' first.")
+if submitted and user_query:
+    if not st.session_state.vector_store:
+        st.error("Please ingest documentation first.")
     else:
-        with st.spinner("Thinking…"):
-            try:
-                result = answer_query(query.strip(), st.session_state.vector_store)
-                st.session_state.history.insert(0, {"query": query.strip(), **result})
-            except Exception as e:
-                st.error(f"Error calling LLM: {e}")
+        with st.spinner("Analyzing documentation..."):
+            res = answer_query(user_query, st.session_state.vector_store)
+            st.session_state.history.insert(0, {"query": user_query, **res})
 
+# Display History
 for entry in st.session_state.history:
-    with st.container():
-        st.markdown(f"### {entry['query']}")
-        st.markdown("#### Answer")
-        st.markdown(entry["answer"])
-        st.caption(f"Response latency: **{entry['latency']:.2f} s**")
-
-        with st.expander("Sources (retrieved chunks)", expanded=False):
-            for i, src in enumerate(entry["sources"]):
-                metadata = src.get("metadata", {})
-                page = metadata.get("page", "?")
-                st.markdown(f"**Chunk {i + 1}** — Page {page}")
-                st.code(src.get("content", "No content found"), language=None)
-
-        st.markdown("---")
+    st.markdown(f"### ❓ {entry['query']}")
+    st.markdown(f"**💡 Answer:**\n{entry['answer']}")
+    with st.expander("Technical Sources (Retrieved Chunks)"):
+        for i, src in enumerate(entry["sources"]):
+            st.info(f"Chunk {i+1} (Page {src['metadata'].get('page','?')})")
+            st.code(src["content"])
+    st.divider()
