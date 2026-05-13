@@ -1,0 +1,7 @@
+langchain==0.2.16
+langchain-community==0.2.16
+pypdf==4.3.1
+chromadb==0.5.5
+requests==2.32.3
+streamlit==1.38.0
+python-dotenv==1.0.1
