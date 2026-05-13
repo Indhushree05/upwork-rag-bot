@@ -39,14 +39,21 @@ if "vector_store" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []  # list of {query, answer, sources, latency}
 
+<<<<<<< HEAD
 if "current_query" not in st.session_state:
     st.session_state["current_query"] = ""
 
+=======
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
 # FIX: Load vector store immediately on startup before any UI renders
 if st.session_state.vector_store is None and Path(CHROMA_PERSIST_DIR).exists():
     try:
         st.session_state.vector_store = load_vector_store()
     except Exception as e:
+<<<<<<< HEAD
+=======
+        # We pass here so it doesn't crash the UI if the index is corrupted
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
         pass
 
 # ─────────────────────────────────────────────
@@ -64,12 +71,20 @@ with st.sidebar:
 
     if st.button("Ingest / Re-ingest Documentation", use_container_width=True):
         if uploaded_file is None:
+<<<<<<< HEAD
+=======
+            # Fall back to the path set in .env
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
             pdf_path = DOCS_PATH
             if not Path(pdf_path).exists():
                 st.error(f"No file uploaded and '{pdf_path}' not found. "
                          "Please upload a PDF or set DOCS_PATH in .env.")
                 st.stop()
         else:
+<<<<<<< HEAD
+=======
+            # Save the uploaded bytes to a temp location
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
             pdf_path = "D:\\upwork_api_docs_temp.pdf"
             with open(pdf_path, "wb") as f:
                 f.write(uploaded_file.read())
@@ -84,6 +99,10 @@ with st.sidebar:
 
     st.markdown("---")
 
+<<<<<<< HEAD
+=======
+    # Status Indicator
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
     if st.session_state.vector_store is not None:
         st.success("✅ Vector Store Loaded")
     else:
@@ -114,6 +133,7 @@ eval_questions = [
 cols = st.columns(3)
 for i, (col, q) in enumerate(zip(cols, eval_questions)):
     if col.button(f"Q{i + 1}", help=q, use_container_width=True, key=f"eval_{i}"):
+<<<<<<< HEAD
         st.session_state["current_query"] = q
         st.rerun()
 
@@ -121,13 +141,25 @@ for i, (col, q) in enumerate(zip(cols, eval_questions)):
 query = st.text_input(
     "Your question:",
     value=st.session_state["current_query"],
+=======
+        st.session_state["prefill_query"] = q
+
+# Query input
+default_query = st.session_state.pop("prefill_query", "")
+query = st.text_input(
+    "Your question:",
+    value=default_query,
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
     placeholder="e.g. How do I authenticate with OAuth 2.0?",
 )
 
 ask_button = st.button("Ask", type="primary", use_container_width=False)
 
 if ask_button and query.strip():
+<<<<<<< HEAD
     st.session_state["current_query"] = query.strip()
+=======
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
     if st.session_state.vector_store is None:
         st.error(
             "Vector store is not loaded. "
@@ -148,6 +180,7 @@ for entry in st.session_state.history:
     with st.container():
         st.markdown(f"### {entry['query']}")
 
+<<<<<<< HEAD
         st.markdown("#### Answer")
         st.markdown(entry["answer"])
 
@@ -155,6 +188,19 @@ for entry in st.session_state.history:
 
         with st.expander("Sources (retrieved chunks)", expanded=False):
             for i, src in enumerate(entry["sources"]):
+=======
+        # ── Answer ──────────────────────────────────────
+        st.markdown("#### Answer")
+        st.markdown(entry["answer"])
+
+        # ── Latency ─────────────────────────────────────
+        st.caption(f"Response latency: **{entry['latency']:.2f} s**")
+
+        # ── Sources ─────────────────────────────────────
+        with st.expander("Sources (retrieved chunks)", expanded=False):
+            for i, src in enumerate(entry["sources"]):
+                # Handle different metadata structures if necessary
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
                 metadata = src.get("metadata", {})
                 page = metadata.get("page", "?")
                 st.markdown(f"**Chunk {i + 1}** — Page {page}")

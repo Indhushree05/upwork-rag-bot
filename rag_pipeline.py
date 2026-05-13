@@ -20,9 +20,15 @@ DOCS_PATH = os.getenv("DOCS_PATH", "upwork_api_docs.pdf")
 CHROMA_PERSIST_DIR = "./chroma_db"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+<<<<<<< HEAD
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 100
 TOP_K = 5
+=======
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
+TOP_K = 3
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
 
 SYSTEM_PROMPT = """You are a Senior Upwork API Consultant with deep expertise in the Upwork developer platform. You answer developer questions strictly based on the context passages provided below. 
 
@@ -95,6 +101,7 @@ def call_llm(messages: list[dict]) -> tuple[str, float]:
     }
 
     t0 = time.time()
+<<<<<<< HEAD
 
     # Retry up to 3 times on rate limit (429)
     for attempt in range(3):
@@ -105,6 +112,9 @@ def call_llm(messages: list[dict]) -> tuple[str, float]:
             continue
         break
 
+=======
+    response = requests.post(DEEPINFRA_BASE_URL, headers=headers, json=payload, timeout=60)
+>>>>>>> 0906bd565adc91a0f02bbcc6b8bcdeaff6b1d93d
     latency = time.time() - t0
 
     response.raise_for_status()
